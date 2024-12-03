@@ -1,0 +1,90 @@
+name: Build and Push Docker Image to Amazon ECR
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: aws-lab-fiap
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java' ]
+        exclude: []
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+            java-version: '17'
+            distribution: 'adopt'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+            languages: ${{ matrix.language }}
+            # Se necessário, configure um caminho de build:
+            # build-path: <path/to/build>
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      - name: Check test coverage
+        run: |
+            # Extrai a cobertura do arquivo XML do JaCoCo
+            COVERAGE=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@covered)" target/site/jacoco/jacoco.xml)
+            MISSED=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@missed)" target/site/jacoco/jacoco.xml)
+            
+            # Calcula a porcentagem de cobertura
+            TOTAL=$((COVERAGE + MISSED))
+            PERCENTAGE=$((COVERAGE * 100 / TOTAL))
+            
+            echo "Cobertura atual: $PERCENTAGE%"
+            
+            # Falha se a cobertura for menor que 70%
+            if [ $PERCENTAGE -lt 70 ]; then
+              echo "Cobertura de testes abaixo de 70%."
+              exit 1
+            fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Authenticate on AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: 'us-east-1'
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REPOSITORY: rappidu-application
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
