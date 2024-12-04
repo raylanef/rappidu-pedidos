@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PedidoApplicationTest {
   @Test
     void testeTeste(){
-      var x = 0;
-      Assertions.assertTrue(x==0);
+      var x = 1;
+      Assertions.assertTrue(x==1);
   }
 }
