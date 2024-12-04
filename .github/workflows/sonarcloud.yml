@@ -16,12 +16,9 @@ jobs:
 
 
     steps:
-      - name: List repository files
-        run: ls -R
-
       - name: Build and test with Maven
         run: |
-         mvn clean verify jacoco:report
+         ls -R && mvn clean verify jacoco:report
         
 
       - name: Analyze with SonarCloud
