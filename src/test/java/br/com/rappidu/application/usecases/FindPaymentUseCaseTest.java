@@ -30,8 +30,8 @@ class FindPaymentUseCaseTest {
         Long paymentId = 123L;
         Payment expectedPayment = new Payment(paymentId, new BigDecimal(100.0), 3, 2);
         when(paymentGateway.findById(paymentId)).thenReturn(expectedPayment);
-
         Payment actualPayment = findPaymentUseCase.get(paymentId);
+
         verify(paymentGateway, times(1)).findById(paymentId);
         assertEquals(expectedPayment, actualPayment);
     }
@@ -40,9 +40,9 @@ class FindPaymentUseCaseTest {
     void getShouldThrowExceptionWhenPaymentDoesNotExist() {
         Long paymentId = 123L;
         when(paymentGateway.findById(paymentId)).thenThrow(new RuntimeException("Payment not found"));
-
-
         RuntimeException exception = assertThrows(RuntimeException.class, () -> findPaymentUseCase.get(paymentId));
+
+
         assertEquals("Payment not found", exception.getMessage());
         verify(paymentGateway, times(1)).findById(paymentId);
     }
