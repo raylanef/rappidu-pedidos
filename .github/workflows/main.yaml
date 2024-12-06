@@ -43,27 +43,44 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn sonar:sonar -Pcoverage && mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=raylanef_rappidu-pedidos
 
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Authenticate on AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: 'us-east-1'
-
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push Docker image
-        env:
-          ECR_REPOSITORY: rappidu-application
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Check test coverage
         run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          # Extrai a cobertura do arquivo XML do JaCoCo
+          COVERAGE=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@covered)" target/site/jacoco/jacoco.xml)
+          MISSED=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@missed)" target/site/jacoco/jacoco.xml)
+          
+          # Calcula a porcentagem de cobertura
+          TOTAL=$((COVERAGE + MISSED))
+          PERCENTAGE=$((COVERAGE * 100 / TOTAL))
+          
+          echo "Cobertura atual: $PERCENTAGE%"
+          
+          # Falha se a cobertura for menor que 70%
+          if [ $PERCENTAGE -lt 70 ]; then
+            echo "Cobertura de testes abaixo de 70%."
+            exit 1
+          fi
+
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v2
+#
+#      - name: Authenticate on AWS
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+#          aws-region: 'us-east-1'
+#
+#      - name: Log in to Amazon ECR
+#        id: login-ecr
+#        uses: aws-actions/amazon-ecr-login@v2
+#
+#      - name: Build and push Docker image
+#        env:
+#          ECR_REPOSITORY: rappidu-application
+#          IMAGE_TAG: ${{ github.sha }}
+#        run: |
+#          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+#          docker tag $ECR_REPOSITORY:$IMAGE_TAG 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+#          docker push 526450568081.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
