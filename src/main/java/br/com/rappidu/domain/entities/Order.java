@@ -21,6 +21,8 @@ public class Order {
 
 
     public static Order create(String customerName, List<Item> items) {
+
+        var teste = 0;
         BigDecimal amount = items.stream()
                 .map(Item::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
