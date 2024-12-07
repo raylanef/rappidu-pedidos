@@ -105,6 +105,16 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.10</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/entities/**</exclude>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/exceptions/**</exclude>
+                        <exclude>**/infra/mappers/**</exclude>
+                        <exclude>**/infra/persistence/**</exclude>
+                        <exclude>**/domain/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
